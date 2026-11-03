@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { generateTerrain } from './terrain.js';
+import { generateTerrain, HALF } from './terrain.js';
 import { scatter } from './scatter.js';
 import { buildWorld, TIMES, WEATHERS } from './world.js';
 import { buildFlora } from './flora.js';
@@ -10,17 +10,17 @@ import { buildProps, ALT_OFFSET } from './props.js';
 import { buildPhysics } from './physics.js';
 import { Vehicle } from './vehicle.js';
 import { buildCarModel } from './carmodel.js';
-import { CameraRig } from './camera.js';
+import { CameraRig, CAMERA_MODES } from './camera.js';
 import { Hud } from './hud.js';
 import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { Spray, Snowfall } from './fx.js';
 import { Journal, formatTime } from './journal.js';
 import { setLang, getLang, t, applyLang, detectLang, landmarkName } from './i18n.js';
-import { SPAWN } from './layout.js';
+import { SPAWN, LANDMARKS } from './layout.js';
+import { SAVE_KEY, parseSave, serializeSave } from './save.js';
 
 const $ = (id) => document.getElementById(id);
-const SAVE_KEY = 'timberline-overland.v1';
 const QUALITY = {
   high: { dpr: 2, shadow: 2048, grass: 150, aa: true },
   medium: { dpr: 1.25, shadow: 1024, grass: 105, aa: true },
@@ -39,34 +39,58 @@ const DIRT_RATE = { dirt: 0.004, gravel: 0.003, grass: 0.001, scree: 0.003, snow
 
 // Saved progress and settings. Storage can be unavailable (private windows,
 // blocked site data); the game then simply keeps progress for this session.
-function loadSave() {
+function readStorage() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY)) || {};
+    return localStorage.getItem(SAVE_KEY);
   } catch {
-    return {};
+    return null;
   }
 }
 function writeSave(data) {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, serializeSave(data));
   } catch {
-    // Not persisted; see loadSave().
+    // Not persisted; see readStorage().
   }
 }
 
-const saved = loadSave();
+const saved = parseSave(readStorage(), {
+  langs: ['ko', 'en'],
+  qualities: Object.keys(QUALITY),
+  times: TIMES,
+  weathers: WEATHERS,
+  cams: CAMERA_MODES,
+  placeIds: LANDMARKS.filter((l) => l.counted).map((l) => l.id),
+  half: HALF - 8,
+});
 const settings = {
-  lang: saved.settings?.lang || detectLang(),
-  quality: saved.settings?.quality || (matchMedia('(pointer: coarse)').matches ? 'medium' : 'high'),
-  muted: !!saved.settings?.muted,
-  time: saved.settings?.time || 'golden',
-  weather: saved.settings?.weather || 'clear',
-  cam: saved.settings?.cam || 'chase',
+  lang: saved.settings.lang || detectLang(),
+  quality: saved.settings.quality || (matchMedia('(pointer: coarse)').matches ? 'medium' : 'high'),
+  muted: saved.settings.muted ?? false,
+  time: saved.settings.time || 'golden',
+  weather: saved.settings.weather || 'clear',
+  cam: saved.settings.cam || 'chase',
 };
 setLang(settings.lang);
 applyLang();
 
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+// Let the loading text paint between boot steps. A background tab never runs
+// requestAnimationFrame, so there we yield with a message instead, and a
+// timeout covers a tab that is hidden while waiting.
+function nextFrame() {
+  return new Promise((resolve) => {
+    let done = false;
+    const go = () => { if (!done) { done = true; resolve(); } };
+    if (document.hidden) {
+      const ch = new MessageChannel();
+      ch.port1.onmessage = go;
+      ch.port2.postMessage(0);
+      return;
+    }
+    requestAnimationFrame(go);
+    setTimeout(go, 120);
+  });
+}
 function loading(key, frac) {
   $('load-step').textContent = t(key);
   $('load-fill').style.transform = `scaleX(${frac})`;
@@ -158,7 +182,7 @@ async function boot() {
 
   function spawn(fromSave) {
     const p = fromSave && saved.pos;
-    if (p && Number.isFinite(p.x) && Number.isFinite(p.z)) placeCar(p.x, p.z, p.heading || 0);
+    if (p) placeCar(p.x, p.z, p.heading);
     else placeCar(SPAWN.x, SPAWN.z, SPAWN.heading);
   }
   spawn(true);
@@ -200,6 +224,19 @@ async function boot() {
     else if (s === 'done') show('done');
     else show(null);
   }
+
+  // A lost GPU context (driver reset, a mobile browser reclaiming memory)
+  // stops all drawing until the browser restores it. three.js rebuilds its
+  // GPU state on restore; meanwhile pause and tell the player.
+  renderer.domElement.addEventListener('webglcontextlost', () => {
+    if (state === 'drive') setState('paused');
+    $('gl-lost').classList.remove('hidden');
+  });
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    $('gl-lost').classList.add('hidden');
+    hud.toast(t('gl.restored'));
+  });
+  $('gl-reload').onclick = () => location.reload();
 
   function refreshTitle() {
     const has = journal.count > 0 || !!saved.pos;

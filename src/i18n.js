@@ -108,6 +108,15 @@ const STRINGS = {
     'help.lights': '전조등',
     'help.misc': '시간 · 날씨 · 사진 · 지도',
     'help.pause': '소리 · 일시 정지',
+    'gl.lost': '그래픽 장치 연결이 끊겼습니다. 브라우저가 복구하면 이어집니다.',
+    'gl.reload': '새로고침',
+    'gl.restored': '그래픽이 복구되었습니다',
+    'touch.left': '왼쪽으로 조향',
+    'touch.right': '오른쪽으로 조향',
+    'touch.gas': '가속',
+    'touch.brake': '브레이크·후진',
+    'touch.recover': '바로 세우기, 길게 누르면 트레일 복귀',
+    'touch.cam': '시점 전환',
     'help.tip': '팁: 바위를 넘을 땐 L 저속 기어로 천천히, 한쪽 바퀴가 뜨면 X 로 디퍼렌셜을 잠그세요. 급경사 내리막에서 가속을 떼면 저속 기어가 엔진 브레이크로 잡아 줍니다.',
   },
   en: {
@@ -217,6 +226,15 @@ const STRINGS = {
     'help.lights': 'Headlights',
     'help.misc': 'Time · weather · photo · map',
     'help.pause': 'Sound · pause',
+    'gl.lost': 'The graphics device was lost. The game resumes when the browser restores it.',
+    'gl.reload': 'Reload',
+    'gl.restored': 'Graphics restored',
+    'touch.left': 'Steer left',
+    'touch.right': 'Steer right',
+    'touch.gas': 'Throttle',
+    'touch.brake': 'Brake and reverse',
+    'touch.recover': 'Right the car, hold to return to the trail',
+    'touch.cam': 'Change camera',
     'help.tip': 'Tip: crawl over rocks slowly in low range, and lock the diffs when a wheel lifts. Lift off on steep descents and low range holds you back with engine braking.',
   },
 };
@@ -271,6 +289,12 @@ export function landmarkDesc(id) {
 
 export function applyLang(root = document) {
   for (const el of root.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  // Icon-only buttons (narrow screens, touch controls) still need a name.
+  for (const el of root.querySelectorAll('[data-i18n-aria]')) {
+    const label = t(el.dataset.i18nAria);
+    el.setAttribute('aria-label', label);
+    el.title = label;
+  }
 }
 
 export function detectLang() {

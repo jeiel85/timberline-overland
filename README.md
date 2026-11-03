@@ -17,6 +17,7 @@
   <img alt="Vanilla JS" src="https://img.shields.io/badge/vanilla-JS_modules-f7df1e?logo=javascript&logoColor=black" />
   <img alt="100% procedural" src="https://img.shields.io/badge/assets-100%25_procedural-c4532d" />
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green" />
+  <a href="https://github.com/jeiel85/timberline-overland/actions/workflows/test.yml"><img alt="tests" src="https://github.com/jeiel85/timberline-overland/actions/workflows/test.yml/badge.svg" /></a>
 </p>
 
 <img src="docs/trailer.gif" alt="석양 속 숲길을 달려 호수 여울을 건너는 주행 장면" width="80%" />
@@ -105,6 +106,9 @@ node --test
 - **지형** — 생성의 결정성, 트레일별 최대 경사와 횡경사, 여울 길이·깊이, 랜드마크가 마른 땅 위에 있는지, 트레일 위에 나무·바위가 없는지(협곡 바위는 높이 제한).
 - **구동계** — 바퀴 하나가 뜬 오픈 디퍼, 잠긴 디퍼, 대각선 접지(오픈은 정지·잠금은 전진), 센터 잠김의 토크 이동, 저속 기어 배수와 속도 제한.
 - **원정 일지** — 발견 반경, 진행 순서, 완료 시 시계 정지, 저장·복원.
+- **저장 데이터** — 이전 버전 저장본, 깨진 JSON, 손으로 고친 값(알 수 없는 시간대·품질·좌표)이 기본값으로 안전하게 돌아오는지.
+
+푸시와 PR마다 GitHub Actions가 같은 테스트를 돌립니다.
 
 ## 구조
 
@@ -116,6 +120,7 @@ src/
   scatter.js        나무·바위·협곡 바위·풀·꽃 배치 (순수)
   drivetrain.js     엔진 곡선, H/L, 오픈/잠금 디퍼렌셜 분배 (순수)
   journal.js        원정 일지 진행·통계·저장 (순수)
+  save.js           저장 데이터 버전·필드 검증 (순수)
   vehicle.js        Rapier 강체 + 레이 샘플링 바퀴, 서스펜션, 타이어 힘
   physics.js        높이필드·볼록 껍질 바위·나무 기둥·건물 충돌체
   world.js          지형 셰이더, 호수, 하늘 돔, 원경 산맥, 시간·날씨 프리셋

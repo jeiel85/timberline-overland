@@ -124,7 +124,8 @@
     #hint { bottom: calc(190px + var(--safe-b)); left: 50%; transform: translateX(-50%); padding: 7px 14px; border-radius: 10px; background: rgba(28, 28, 26, 0.7); color: #fffaf0; font-size: 12.5px; font-weight: 600; opacity: 0; transition: opacity 0.4s; white-space: nowrap; }
     #hint.show { opacity: 1; }
 
-    #markers { inset: 0; }
+    /* World markers sit under the cards and gauges. */
+    #markers { inset: 0; z-index: -1; }
     .marker { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: 3px; margin: -14px 0 0 -60px; width: 120px; color: #fffaf0; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); will-change: transform; }
     .marker i { width: 13px; height: 13px; transform: rotate(45deg); background: #fffaf0; border: 2px solid var(--ink); }
     .marker b { font-size: 12px; font-weight: 800; letter-spacing: 0.01em; }
@@ -214,6 +215,8 @@
     #photo .bar button { border: 0; border-radius: 10px; padding: 9px 12px; background: rgba(255, 250, 240, 0.12); color: #fffaf0; font-size: 12px; font-weight: 700; cursor: pointer; }
     #photo .bar button.on { background: #fffaf0; color: var(--ink); }
     #photo .bar .shot { background: var(--orange); padding: 9px 18px; }
+    #gl-lost { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 70; width: min(440px, calc(100vw - 32px)); display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: rgba(28, 28, 26, 0.92); color: #fffaf0; font-size: 13px; font-weight: 600; line-height: 1.45; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+    #gl-lost .btn { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
     #postcard-frame { position: fixed; inset: 0; z-index: 19; pointer-events: none; box-shadow: inset 0 0 0 clamp(10px, 2.2vw, 26px) #f7f0e1; }
 
     @media (max-width: 860px) {
@@ -225,6 +228,15 @@
       #compass { display: none; }
       #brand b { font-size: 17px; }
       #brand small { display: none; }
+    }
+    /* Phones held sideways: the log moves left, above the small touch buttons,
+       so the right column stays free for the gauge and the pedals. */
+    @media (max-height: 500px) {
+      body.touch #brand > div:last-child { display: none; }
+      body.touch #log { left: 16px; right: auto; top: 64px; width: 250px; padding: 10px 12px; }
+      body.touch #log-desc { display: none; }
+      body.touch #log-name { font-size: 15px; }
+      body.touch #toasts { top: 16px; }
     }
     @media (max-width: 560px) {
       #brand > div:last-child { display: none; }
@@ -267,13 +279,13 @@
     <div id="compass"><canvas id="compass-canvas" width="720" height="72"></canvas><span id="heading-deg">000°</span></div>
 
     <div id="toolbar">
-      <button data-act="cam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg><span data-i18n="tb.cam"></span><kbd>C</kbd></button>
-      <button data-act="time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg><span data-i18n="tb.time"></span><kbd>T</kbd></button>
-      <button data-act="weather"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H8a5 5 0 1 1 .9-9.9A6 6 0 0 1 20 11.5a3.75 3.75 0 0 1-2.5 7.5z" /></svg><span data-i18n="tb.weather"></span><kbd>G</kbd></button>
-      <button data-act="photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="4" /></svg><span data-i18n="tb.photo"></span><kbd>F</kbd></button>
-      <button data-act="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" /><path d="M9 4v14M15 6v14" /></svg><span data-i18n="tb.map"></span><kbd>M</kbd></button>
-      <button data-act="sound" id="tb-sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg><span data-i18n="tb.sound"></span><kbd>V</kbd></button>
-      <button data-act="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></svg><span data-i18n="tb.help"></span><kbd>?</kbd></button>
+      <button data-act="cam" data-i18n-aria="tb.cam"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg><span data-i18n="tb.cam"></span><kbd>C</kbd></button>
+      <button data-act="time" data-i18n-aria="tb.time"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg><span data-i18n="tb.time"></span><kbd>T</kbd></button>
+      <button data-act="weather" data-i18n-aria="tb.weather"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H8a5 5 0 1 1 .9-9.9A6 6 0 0 1 20 11.5a3.75 3.75 0 0 1-2.5 7.5z" /></svg><span data-i18n="tb.weather"></span><kbd>G</kbd></button>
+      <button data-act="photo" data-i18n-aria="tb.photo"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="4" /></svg><span data-i18n="tb.photo"></span><kbd>F</kbd></button>
+      <button data-act="map" data-i18n-aria="tb.map"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" /><path d="M9 4v14M15 6v14" /></svg><span data-i18n="tb.map"></span><kbd>M</kbd></button>
+      <button data-act="sound" id="tb-sound" data-i18n-aria="tb.sound"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg><span data-i18n="tb.sound"></span><kbd>V</kbd></button>
+      <button data-act="help" data-i18n-aria="tb.help"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></svg><span data-i18n="tb.help"></span><kbd>?</kbd></button>
     </div>
 
     <div id="log" class="card">
@@ -319,15 +331,15 @@
   </div>
 
   <div id="touch">
-    <button class="steer" id="t-left" data-touch="left">◀</button>
-    <button class="steer" id="t-right" data-touch="right">▶</button>
-    <button class="pedal" id="t-gas" data-touch="gas">GAS</button>
-    <button class="pedal" id="t-brake" data-touch="brake">BRAKE</button>
-    <button class="small" id="t-hb" data-touch="hb">HB</button>
-    <button class="small" id="t-range" data-action="range">H/L</button>
-    <button class="small" id="t-lock" data-action="lock">LOCK</button>
-    <button class="small" id="t-reset" data-action="recover">↺</button>
-    <button class="small" id="t-cam" data-action="cam">CAM</button>
+    <button class="steer" id="t-left" data-touch="left" data-i18n-aria="touch.left">◀</button>
+    <button class="steer" id="t-right" data-touch="right" data-i18n-aria="touch.right">▶</button>
+    <button class="pedal" id="t-gas" data-touch="gas" data-i18n-aria="touch.gas">GAS</button>
+    <button class="pedal" id="t-brake" data-touch="brake" data-i18n-aria="touch.brake">BRAKE</button>
+    <button class="small" id="t-hb" data-touch="hb" data-i18n-aria="help.hb">HB</button>
+    <button class="small" id="t-range" data-action="range" data-i18n-aria="help.range">H/L</button>
+    <button class="small" id="t-lock" data-action="lock" data-i18n-aria="help.lock">LOCK</button>
+    <button class="small" id="t-reset" data-action="recover" data-i18n-aria="touch.recover">↺</button>
+    <button class="small" id="t-cam" data-action="cam" data-i18n-aria="touch.cam">CAM</button>
   </div>
 
   <!-- ===================== title ===================== -->
@@ -434,6 +446,10 @@
     </div>
   </div>
   <div id="postcard-frame" class="hidden"></div>
+  <div id="gl-lost" class="hidden" role="alert">
+    <span data-i18n="gl.lost"></span>
+    <button class="btn" id="gl-reload" data-i18n="gl.reload"></button>
+  </div>
 
   <script type="module" src="src/main.js"></script>
 </body>
