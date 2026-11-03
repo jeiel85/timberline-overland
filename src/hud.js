@@ -161,7 +161,7 @@ export class Hud {
     $('speed').textContent = String(Math.round(kmh)).padStart(2, '0');
     $('range').textContent = car.range === 'low' ? 'L' : 'H';
     $('range').classList.toggle('low', car.range === 'low');
-    $('gear').textContent = car.dir < 0 && Math.abs(car.drive) > 0.01 ? 'R' : car.speed < -0.5 ? 'R' : Math.abs(car.speed) < 0.3 && Math.abs(car.drive) < 0.02 ? 'N' : `D${car.range === 'high' ? car.gear : ''}`;
+    $('gear').textContent = car.dir < 0 && Math.abs(car.drive) > 0.01 ? 'R' : car.speed < -0.5 ? 'R' : Math.abs(car.speed) < 0.3 && Math.abs(car.drive) < 0.02 ? 'N' : `D${car.gear}`;
     $('lock').classList.toggle('on', car.diffLock);
     const surf = car.wheels.find((wh) => wh.contact)?.surface;
     $('surface').textContent = surf ? t(`surface.${surf}`) : '—';

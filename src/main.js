@@ -8,7 +8,7 @@ import { buildWorld, TIMES, WEATHERS } from './world.js';
 import { buildFlora } from './flora.js';
 import { buildProps, ALT_OFFSET } from './props.js';
 import { buildPhysics } from './physics.js';
-import { Vehicle } from './vehicle.js';
+import { Vehicle, WHEEL_R } from './vehicle.js';
 import { buildCarModel } from './carmodel.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
 import { Hud } from './hud.js';
@@ -279,9 +279,17 @@ async function boot() {
     for (const b of document.querySelectorAll('[data-lang]')) b.classList.toggle('on', b.dataset.lang === getLang());
   }
 
+  let engineStarted = false;
   function startDriving() {
-    sound.start();
-    sound.setMuted(settings.muted);
+    sound.start()
+      .then(() => {
+        sound.setMuted(settings.muted);
+        if (!engineStarted) {
+          engineStarted = true;
+          sound.ignition();
+        }
+      })
+      .catch((err) => console.error('Sound failed to start:', err));
     updateSoundButton();
     setState('drive');
   }
@@ -415,10 +423,12 @@ async function boot() {
     switch (action) {
       case 'range':
         hud.toast(t(car.toggleRange() === 'low' ? 'toast.low' : 'toast.high'));
+        sound.clunk(true);
         break;
       case 'lock':
         car.diffLock = !car.diffLock;
         hud.toast(t(car.diffLock ? 'toast.lockOn' : 'toast.lockOff'));
+        sound.clunk(false);
         break;
       case 'cam':
         hud.toast(t(`cam.${rig.cycle()}`));
@@ -525,6 +535,8 @@ async function boot() {
   onResize();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && state === 'drive') setState('paused');
+    if (document.hidden) sound.suspend();
+    else sound.resume();
   });
 
   // --- per-frame helpers ---------------------------------------------------------------
@@ -670,12 +682,14 @@ async function boot() {
     for (const a of input.consume()) handle(a);
 
     const simulate = state === 'drive' || state === 'title' || state === 'done';
+    let impulse = 0;
     if (simulate) {
       acc += dt;
       let steps = 0;
       while (acc >= DT && steps < 8) {
         car.step(DT, input);
         phys.world.step();
+        if (state === 'drive') impulse = Math.max(impulse, car.sampleContacts());
         acc -= DT;
         steps++;
       }
@@ -702,18 +716,41 @@ async function boot() {
       hints(dt);
     }
     if (state !== 'title' && state !== 'photo') hud.update(car, camera, innerWidth, innerHeight);
-    const splash = car.wheels.reduce((s, w) => s + (w.inWater ? Math.abs(w.vf) : 0), 0) / 12;
-    const grit = car.wheels.reduce((s, w) => s + (w.contact ? ({ gravel: 1, scree: 1, dirt: 0.7, rock: 0.5, snow: 0.2, grass: 0.3, mud: 0.4 }[w.surface] ?? 0.4) : 0), 0) / 4;
+    // --- sound ----------------------------------------------------------------------
+    const surfaces = {};
+    let slip = 0;
+    let bounce = 0;
+    let splash = 0;
+    for (const w of car.wheels) {
+      if (w.inWater) splash += Math.abs(w.vf) / 10;
+      if (!w.contact) continue;
+      surfaces[w.surface] = (surfaces[w.surface] || 0) + 0.25;
+      if (w.spinning || w.sliding) slip += 0.25 * Math.min(1, 0.4 + Math.abs(w.omega * WHEEL_R - w.vf) / 6);
+      bounce += Math.abs(w.compVel || 0);
+    }
+    const gb = car.gearbox;
+    const coasting = Math.abs(car.drive) < 0.05;
+    // Torque cut during a shift, the limiter bouncing, a lighter cut on the overrun.
+    const cut = gb.limiter ? (Math.sin(time * 90) > 0 ? 1 : 0) : gb.shifting ? 0.45 : coasting && car.rpm > 1500 ? 0.4 : 0;
+    const driving = state === 'drive' || state === 'done';
+    if (driving && impulse > 1800) sound.crash(impulse / 9000);
     sound.update({
-      active: state === 'drive' || state === 'done',
+      active: driving,
       rpm: car.rpm,
-      throttle: Math.abs(car.drive),
+      load: Math.abs(car.drive),
+      cut,
       speed: car.speed,
-      grit,
-      slip: car.wheels.some((w) => w.spinning || w.sliding) ? 1 : 0,
+      range: car.range,
+      view: state === 'photo' ? 'drone' : rig.mode,
+      surfaces,
+      slip: Math.min(1, slip),
+      splash: Math.min(1, splash),
+      scrape: car.touching ? Math.min(1, Math.abs(car.speed) / 3) : 0,
+      rattle: Math.min(1, bounce / 5) * Math.min(1, Math.abs(car.speed) / 3),
       wind: ws.wind,
       altitude: car.pos.y,
-      splash,
+      night: ws.night > 0.5,
+      birds: driving && ws.night < 0.5 && world.weather !== 'snow' && car.pos.y < 105,
     });
     requestAnimationFrame(frame);
   }
@@ -721,7 +758,7 @@ async function boot() {
 
   // ?debug exposes the game objects on window for poking at from the console.
   if (new URLSearchParams(location.search).has('debug')) {
-    window.__timberline = { T, S, car, phys, world, rig, journal: () => journal, scene, renderer, camera, input };
+    window.__timberline = { T, S, car, phys, world, rig, journal: () => journal, scene, renderer, camera, input, sound };
   }
 }
 

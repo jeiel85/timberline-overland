@@ -21,6 +21,7 @@ const PRECACHE = [
   "./src/camera.js",
   "./src/carmodel.js",
   "./src/drivetrain.js",
+  "./src/engine-worklet.js",
   "./src/flora.js",
   "./src/fx.js",
   "./src/hud.js",

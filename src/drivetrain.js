@@ -66,14 +66,74 @@ export function distribute(force, caps, diffLock) {
   };
 }
 
-/** Engine speed and the automatic's gear, for the sound and the gauges. */
-export function engineState(range, v, throttle) {
-  const R = RANGES[range];
-  const ratio = clamp(Math.abs(v) / R.top, 0, 1);
-  const g = Math.min(R.gears, 1 + Math.floor(ratio * R.gears));
-  const within = ratio * R.gears - (g - 1);
-  const driven = 1300 + within * 3200;
-  const idle = 820 + throttle * 1400;
-  const rpm = Math.max(idle, Math.abs(v) < 0.3 ? 0 : driven);
-  return { rpm: clamp(rpm, 750, 4800), gear: g };
+// --- automatic gearbox -------------------------------------------------------
+// Drives the engine speed for the sound and the gauges; the tractive force
+// above does not depend on it.
+
+// Chosen so a full-throttle run shifts at about 23, 40, 61 and 85 km/h and
+// cruises near 2,400 rpm at the 94 km/h top speed.
+const H_RATIOS = [5.2, 3.0, 1.95, 1.4, 1.0];
+const FINAL_DRIVE = 4.1;
+const LOW_RANGE = 2.6;
+const REVERSE = 4.6;
+const LOW_TOP_GEAR = 4;
+export const ENGINE = { idle: 760, stall: 2100, redline: 4200 };
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+export class Gearbox {
+  constructor() {
+    this.gear = 1;
+    this.rpm = ENGINE.idle;
+    this.limiter = false;
+    this.shiftTimer = 0;
+    this.cooldown = 0;
+    this.shifts = 0;
+  }
+
+  get shifting() {
+    return this.shiftTimer > 0;
+  }
+
+  ratio(gear, range, reverse) {
+    return (reverse ? REVERSE : H_RATIOS[gear - 1]) * FINAL_DRIVE * (range === 'low' ? LOW_RANGE : 1);
+  }
+
+  /**
+   * wheelOmega: mean wheel speed (rad/s, any sign) — spinning or airborne
+   * wheels flare the revs just as they would on a real car.
+   */
+  update(dt, wheelOmega, throttle, range, reverse) {
+    const wheelRpm = (Math.abs(wheelOmega) * 60) / (2 * Math.PI);
+    const top = range === 'low' ? LOW_TOP_GEAR : H_RATIOS.length;
+    if (reverse) this.gear = 1;
+    else {
+      if (this.gear > top) this.gear = top;
+      this.cooldown -= dt;
+      const locked = wheelRpm * this.ratio(this.gear, range, false);
+      const up = lerp(1700, 3000, throttle);
+      const down = lerp(1000, 1500, throttle);
+      if (this.cooldown <= 0 && locked > up && this.gear < top) this.shift(1, 0.22);
+      else if (this.cooldown <= 0 && locked < down && this.gear > 1) this.shift(-1, 0.16);
+    }
+    const locked = wheelRpm * this.ratio(this.gear, range, reverse);
+    // The torque converter slips at low road speed, so the engine runs ahead
+    // of the wheels: at a standstill full throttle holds it near stall speed.
+    const slip = clamp(1 - locked / 1600, 0, 1);
+    const converter = ENGINE.idle + throttle * (ENGINE.stall - ENGINE.idle);
+    let target = Math.max(ENGINE.idle, lerp(locked, converter, slip));
+    this.limiter = target > ENGINE.redline;
+    target = Math.min(target, ENGINE.redline);
+    const rate = this.shifting ? 7000 : target > this.rpm ? 3200 : 2200;
+    this.rpm += clamp(target - this.rpm, -rate * dt, rate * dt);
+    this.shiftTimer = Math.max(0, this.shiftTimer - dt);
+    return this;
+  }
+
+  shift(step, time) {
+    this.gear += step;
+    this.shiftTimer = time;
+    this.cooldown = 0.7;
+    this.shifts++;
+  }
 }
