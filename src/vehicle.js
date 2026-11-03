@@ -2,7 +2,7 @@
 // ray-sampled wheels, long-travel suspension, tyre friction and drivetrain.
 
 import * as THREE from 'three';
-import { distribute, driveForce, engineState, RANGES } from './drivetrain.js';
+import { distribute, driveForce, Gearbox, RANGES } from './drivetrain.js';
 
 export const MASS = 2150;
 export const WHEEL_R = 0.43;
@@ -62,10 +62,8 @@ export class Vehicle {
     this.body = world.createRigidBody(desc);
     const lower = RAPIER.ColliderDesc.roundCuboid(0.84, 0.42, 2.05, 0.1).setTranslation(0, 0.27, 0.05);
     const cabin = RAPIER.ColliderDesc.roundCuboid(0.8, 0.36, 1.32, 0.08).setTranslation(0, 1.17, -0.45);
-    for (const c of [lower, cabin]) {
-      c.setDensity(0).setFriction(0.55).setRestitution(0.05);
-      world.createCollider(c, this.body);
-    }
+    this.colliders = [lower, cabin].map((c) => world.createCollider(c.setDensity(0).setFriction(0.55).setRestitution(0.05), this.body));
+    this.touching = false;
 
     this.ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
     this.wheels = LAYOUT.map((l) => ({
@@ -98,7 +96,8 @@ export class Vehicle {
     this.brake = 0;
     this.drive = 0;
     this.speed = 0;
-    this.rpm = 800;
+    this.gearbox = new Gearbox();
+    this.rpm = this.gearbox.rpm;
     this.gear = 1;
     this.dir = 1;
     this.flipTime = 0;
@@ -359,11 +358,31 @@ export class Vehicle {
     b.applyImpulse(_imp, true);
 
     for (const w of this.wheels) w.angle += w.omega * dt;
-    const e = engineState(this.range, speed, Math.abs(this.drive));
-    this.rpm += (e.rpm - this.rpm) * Math.min(1, dt * 8);
-    this.gear = e.gear;
+    const omega = this.wheels.reduce((s, w) => s + w.omega, 0) / 4;
+    this.gearbox.update(dt, omega, Math.abs(this.drive), this.range, this.drive < -0.01 || (this.drive === 0 && speed < -0.5));
+    this.rpm = this.gearbox.rpm;
+    this.gear = this.gearbox.gear;
     if (this.up.y < 0.25) this.flipTime += dt;
     else this.flipTime = Math.max(0, this.flipTime - dt * 2);
+  }
+
+  /**
+   * After a world step: whether the body itself is touching anything (a rock
+   * under the sills, a tree), and the total contact impulse of that step.
+   */
+  sampleContacts() {
+    let touching = false;
+    let impulse = 0;
+    for (const c of this.colliders) {
+      this.world.contactPairsWith(c, (other) => {
+        this.world.contactPair(c, other, (m) => {
+          if (m.numSolverContacts() > 0) touching = true;
+          for (let i = 0; i < m.numContacts(); i++) impulse += m.contactImpulse(i);
+        });
+      });
+    }
+    this.touching = touching;
+    return impulse;
   }
 
   /** Wheel hub positions in chassis-local space, for the model. */

@@ -53,7 +53,7 @@
 - **시간과 날씨** — 아침·한낮·석양·밤(별, 전조등, 모닥불, 깜박이는 표지탑) × 맑음·안개·눈. 직접 작성한 하늘·구름·물 셰이더.
 - **사진 모드** — 자유 궤도 카메라, 필름·흑백·엽서 필터, PNG 저장(엽서 필터는 위치와 고도를 넣은 캡션까지).
 - **어디서나** — 키보드, 게임패드, 휴대폰 터치 버튼. 한국어/영어 UI. 그래픽 품질 3단계와 저사양 자동 하향.
-- **소리도 코드로** — 엔진·흡기·자갈·바람·물·서스펜션 충격음·발견 차임을 Web Audio로 합성합니다. 오디오 파일이 없습니다.
+- **소리도 코드로** — 오디오 파일이 없습니다. 엔진은 AudioWorklet에서 6기통 터보 디젤의 폭발 펄스를 하나씩 만들어 배기·소음기·블록 공명에 통과시킵니다(아이들 진동, 디젤 노킹, 터보 휘슬, 관성 주행 버블). 5단 자동변속기 모델이 변속점·토크컨버터·레브 리미터로 RPM을 움직이고, 저속 기어에서는 트랜스퍼 기어 울림이 커집니다. 노면마다 다른 바퀴 소리(자갈·너덜·눈·풀·물·진흙), 헛도는 바퀴, 바위에 긁히는 차체, 짐받이 덜컹임, 충돌음, 계곡 잔향, 낮의 새소리와 밤의 풀벌레·부엉이까지 Web Audio로 합성합니다.
 
 ## 조작법
 
@@ -104,7 +104,8 @@ node --test
 물리 엔진이나 브라우저 없이 도는 순수 모듈 테스트입니다.
 
 - **지형** — 생성의 결정성, 트레일별 최대 경사와 횡경사, 여울 길이·깊이, 랜드마크가 마른 땅 위에 있는지, 트레일 위에 나무·바위가 없는지(협곡 바위는 높이 제한).
-- **구동계** — 바퀴 하나가 뜬 오픈 디퍼, 잠긴 디퍼, 대각선 접지(오픈은 정지·잠금은 전진), 센터 잠김의 토크 이동, 저속 기어 배수와 속도 제한.
+- **구동계** — 바퀴 하나가 뜬 오픈 디퍼, 잠긴 디퍼, 대각선 접지(오픈은 정지·잠금은 전진), 센터 잠김의 토크 이동, 저속 기어 배수와 속도 제한, 자동변속기의 변속 순서·헌팅 방지·레브 리미터.
+- **엔진 합성기** — 워클릿을 오프라인으로 렌더해 신호가 유한하고 풀스케일 안인지, 폭발 주파수(rpm/20)에 음정이 맞는지, 부하에 따라 커지고 연료 차단에 작아지는지, 터보가 부스트에서 휘슬을 내는지.
 - **원정 일지** — 발견 반경, 진행 순서, 완료 시 시계 정지, 저장·복원.
 - **저장 데이터** — 이전 버전 저장본, 깨진 JSON, 손으로 고친 값(알 수 없는 시간대·품질·좌표)이 기본값으로 안전하게 돌아오는지.
 
@@ -127,7 +128,9 @@ src/
   flora.js          타일 단위 인스턴싱 식생, 카메라 시선 디더링
   props.js          랜드마크 건물과 표지판
   carmodel.js       원정용 4x4 모델
-  camera.js · hud.js · input.js · audio.js · fx.js · i18n.js · main.js
+  audio.js          사운드 믹서: 노면·헛돎·긁힘·충돌·바람·잔향·야생 소리
+  engine-worklet.js 엔진 합성기 (AudioWorklet, 폭발 펄스 + 공명)
+  camera.js · hud.js · input.js · fx.js · i18n.js · main.js
 tests/              node --test
 ```
 
@@ -146,7 +149,8 @@ Threads에서 본 "AI와 함께 만든 브라우저 3D 오프로드 게임" 영�
 - Part-time 4WD with **high/low range** and **locking differentials** — open diffs stall on cross-axle articulation, locked ones climb.
 - Expedition log, pitch/roll inclinometer, per-wheel traction display, heading-up topo minimap and a paper map.
 - Time of day (morning, noon, golden hour, night) × weather (clear, mist, snow), photo mode with filters.
-- Keyboard, gamepad and touch; Korean and English UI; synthesized audio; zero external assets.
+- Keyboard, gamepad and touch; Korean and English UI; zero external assets.
+- Synthesized sound: an AudioWorklet turbo-diesel built from firing pulses through exhaust resonances, an automatic gearbox driving the revs, per-surface tyre textures, scrapes, impacts, valley reverb and wildlife.
 
 **Play:** https://jeiel85.github.io/timberline-overland/ — **Run locally:** `python -m http.server 8137` — **Tests:** `node --test`
 

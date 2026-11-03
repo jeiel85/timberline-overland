@@ -50,3 +50,64 @@ test('low range doubles the pull and caps the speed', () => {
   assert.ok(driveForce('high', RANGES.low.top, 1) > 0);
   assert.equal(driveForce('high', 5, 0), 0);
 });
+
+// --- automatic gearbox (engine speed for the sound and the gauges) ---
+import { Gearbox, ENGINE } from '../src/drivetrain.js';
+
+const omegaAt = (v) => v / 0.43;
+const run = (gb, seconds, fn) => {
+  for (let t = 0; t < seconds; t += 1 / 120) fn(gb, t);
+  return gb;
+};
+
+test('idles at a standstill and holds near stall speed on full throttle', () => {
+  const idle = run(new Gearbox(), 2, (g) => g.update(1 / 120, 0, 0, 'high', false));
+  assert.ok(Math.abs(idle.rpm - ENGINE.idle) < 1);
+  const stall = run(new Gearbox(), 2, (g) => g.update(1 / 120, 0, 1, 'high', false));
+  assert.ok(Math.abs(stall.rpm - ENGINE.stall) < 5, `rpm ${stall.rpm}`);
+});
+
+test('pulls up through the gears without passing the redline', () => {
+  let maxRpm = 0;
+  const gears = [];
+  const gb = run(new Gearbox(), 30, (g, t) => {
+    g.update(1 / 120, omegaAt(t * 0.9), 1, 'high', false);
+    maxRpm = Math.max(maxRpm, g.rpm);
+    if (gears[gears.length - 1] !== g.gear) gears.push(g.gear);
+  });
+  assert.deepEqual(gears, [1, 2, 3, 4, 5]);
+  assert.ok(maxRpm <= ENGINE.redline, `max ${maxRpm}`);
+  assert.equal(gb.gear, 5);
+});
+
+test('cruising at a shift point does not hunt between gears', () => {
+  const gb = new Gearbox();
+  run(gb, 10, (g) => g.update(1 / 120, omegaAt(9), 0.5, 'high', false));
+  const before = gb.shifts;
+  run(gb, 20, (g, t) => g.update(1 / 120, omegaAt(9 + Math.sin(t * 3) * 0.3), 0.5, 'high', false));
+  assert.ok(gb.shifts - before <= 1, `${gb.shifts - before} shifts`);
+});
+
+test('low range reaches its top speed below the limiter', () => {
+  const gb = run(new Gearbox(), 10, (g) => g.update(1 / 120, omegaAt(9.5), 1, 'low', false));
+  assert.ok(gb.gear <= 4, `gear ${gb.gear}`);
+  assert.ok(!gb.limiter && gb.rpm < ENGINE.redline, `rpm ${gb.rpm}`);
+});
+
+test('a high-range cruise at top speed sits in top gear at diesel revs', () => {
+  const gb = run(new Gearbox(), 20, (g) => g.update(1 / 120, omegaAt(26), 0.4, 'high', false));
+  assert.equal(gb.gear, 5);
+  assert.ok(gb.rpm > 2000 && gb.rpm < 2800, `rpm ${gb.rpm}`);
+});
+
+test('a spinning wheel flares the revs and hits the limiter', () => {
+  const gb = run(new Gearbox(), 3, (g) => g.update(1 / 120, 80, 1, 'low', false));
+  assert.ok(gb.limiter);
+  assert.ok(gb.rpm <= ENGINE.redline);
+});
+
+test('reverse uses a single gear', () => {
+  const gb = run(new Gearbox(), 5, (g) => g.update(1 / 120, -omegaAt(3), 1, 'high', true));
+  assert.equal(gb.gear, 1);
+  assert.ok(gb.rpm > ENGINE.idle);
+});
