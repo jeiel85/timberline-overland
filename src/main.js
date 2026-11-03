@@ -75,6 +75,36 @@ const settings = {
 setLang(settings.lang);
 applyLang();
 
+// --- installable app (sw.js) ---------------------------------------------------
+// The worker caches the game so it also runs offline after the first visit.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker registration failed:', err));
+  });
+}
+// Chrome and Edge offer an install prompt; Safari on iOS only installs from
+// the Share sheet, so there we show how instead.
+let installPrompt = null;
+const installed = () => matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $('btn-install').classList.remove('hidden');
+});
+addEventListener('appinstalled', () => {
+  installPrompt = null;
+  $('btn-install').classList.add('hidden');
+});
+$('btn-install').onclick = async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  $('btn-install').classList.add('hidden');
+};
+const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (iOS && !installed()) $('install-hint').classList.remove('hidden');
+
 // Let the loading text paint between boot steps. A background tab never runs
 // requestAnimationFrame, so there we yield with a message instead, and a
 // timeout covers a tab that is hidden while waiting.
