@@ -61,7 +61,8 @@ const saved = parseSave(readStorage(), {
   weathers: WEATHERS,
   cams: CAMERA_MODES,
   placeIds: LANDMARKS.filter((l) => l.counted).map((l) => l.id),
-  half: HALF - 8,
+  // The edge walls stand at ±HALF, so every position the car can record is inside it.
+  half: HALF,
 });
 const settings = {
   lang: saved.settings.lang || detectLang(),

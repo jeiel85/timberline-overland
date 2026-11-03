@@ -61,6 +61,8 @@ test('a position off the map or not a number is dropped', () => {
     assert.equal(parseSave(JSON.stringify({ pos }), allowed).pos, null, JSON.stringify(pos));
   }
   assert.equal(parseSave(JSON.stringify({ pos: { x: 1, z: 2 } }), allowed).pos.heading, 0);
+  // Anything inside the edge walls is a place the car could have stood.
+  assert.deepEqual(parseSave(JSON.stringify({ pos: { x: 499.9, z: -499.9, heading: 2 } }), allowed).pos, { x: 499.9, z: -499.9, heading: 2 });
 });
 
 test('serialize writes the current version and round-trips', () => {
