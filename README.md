@@ -53,6 +53,7 @@
 - **시간과 날씨** — 아침·한낮·석양·밤(별, 전조등, 모닥불, 깜박이는 표지탑) × 맑음·안개·눈. 직접 작성한 하늘·구름·물 셰이더.
 - **사진 모드** — 자유 궤도 카메라, 필름·흑백·엽서 필터, PNG 저장(엽서 필터는 위치와 고도를 넣은 캡션까지).
 - **어디서나** — 키보드, 게임패드, 휴대폰 터치 버튼. 한국어/영어 UI. 그래픽 품질 3단계와 저사양 자동 하향.
+- **앱으로 설치 (PWA)** — 타이틀의 **앱으로 설치** 버튼(Chrome·Edge·Android)이나 iOS Safari의 공유 → 홈 화면에 추가로 설치하면 전체 화면으로 실행됩니다. 한 번 접속한 뒤에는 **오프라인에서도** 플레이할 수 있습니다. 온라인일 때는 늘 최신 버전을 받아 오고, 네트워크가 없을 때만 캐시를 씁니다.
 - **소리도 코드로** — 엔진·흡기·자갈·바람·물·서스펜션 충격음·발견 차임을 Web Audio로 합성합니다. 오디오 파일이 없습니다.
 
 ## 조작법
@@ -106,6 +107,7 @@ node --test
 - **지형** — 생성의 결정성, 트레일별 최대 경사와 횡경사, 여울 길이·깊이, 랜드마크가 마른 땅 위에 있는지, 트레일 위에 나무·바위가 없는지(협곡 바위는 높이 제한).
 - **구동계** — 바퀴 하나가 뜬 오픈 디퍼, 잠긴 디퍼, 대각선 접지(오픈은 정지·잠금은 전진), 센터 잠김의 토크 이동, 저속 기어 배수와 속도 제한.
 - **원정 일지** — 발견 반경, 진행 순서, 완료 시 시계 정지, 저장·복원.
+- **PWA** — 서비스 워커의 사전 캐시 목록이 `src/`의 모든 모듈·import map의 CDN 주소·실제 사용하는 three.js 애드온과 일치하는지, 매니페스트 아이콘이 실제 PNG 크기와 맞는지.
 - **저장 데이터** — 이전 버전 저장본, 깨진 JSON, 손으로 고친 값(알 수 없는 시간대·품질·좌표)이 기본값으로 안전하게 돌아오는지.
 
 푸시와 PR마다 GitHub Actions가 같은 테스트를 돌립니다.
@@ -114,6 +116,7 @@ node --test
 
 ```
 index.html          HUD·오버레이 마크업과 스타일, import map
+manifest.webmanifest · sw.js · icons/   설치 정보, 오프라인 캐시(서비스 워커), 앱 아이콘
 src/
   layout.js         트레일 제어점, 호수, 정상 언덕, 랜드마크 배치
   terrain.js        높이장 생성, 트레일 깎기, 재질 가중치, 노면 조회 (순수)
@@ -147,6 +150,8 @@ Threads에서 본 "AI와 함께 만든 브라우저 3D 오프로드 게임" 영�
 - Expedition log, pitch/roll inclinometer, per-wheel traction display, heading-up topo minimap and a paper map.
 - Time of day (morning, noon, golden hour, night) × weather (clear, mist, snow), photo mode with filters.
 - Keyboard, gamepad and touch; Korean and English UI; synthesized audio; zero external assets.
+
+Installable as a PWA (full screen, playable offline after the first visit).
 
 **Play:** https://jeiel85.github.io/timberline-overland/ — **Run locally:** `python -m http.server 8137` — **Tests:** `node --test`
 
