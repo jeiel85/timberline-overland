@@ -9,6 +9,13 @@
   <meta property="og:description" content="Drive an expedition 4x4 up a glacier-carved alpine valley. Low range, diff locks, real rigid-body physics — right in the browser." />
   <meta property="og:image" content="https://jeiel85.github.io/timberline-overland/docs/cover.jpg" />
   <meta name="theme-color" content="#2c2a26" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Timberline" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e8622a'/><path d='M6 50 L24 20 L32 32 L40 18 L58 50 Z' fill='%23f4ecd9'/><path d='M36 24 L40 18 L44 25 Z' fill='%23ffffff'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,6 +34,9 @@
       --font: 'Archivo', 'Noto Sans KR', system-ui, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, monospace;
       --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1f1c; color: var(--ink); font-family: var(--font); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -49,7 +59,9 @@
     .eyebrow { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
 
     /* ---------- HUD ---------- */
-    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+    /* Installed full-screen on a phone, keep the HUD clear of notches; the
+       bottom edge already adds --safe-b where it matters. */
+    #hud { position: fixed; inset: var(--safe-t) var(--safe-r) 0 var(--safe-l); pointer-events: none; z-index: 10; }
     #hud > * { position: absolute; }
     #brand { top: 16px; left: 16px; display: flex; gap: 10px; align-items: center; color: #fffaf0; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45); }
     #brand .stamp { width: 40px; height: 40px; border-radius: 10px; background: var(--orange); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
@@ -125,7 +137,7 @@
     #hint.show { opacity: 1; }
 
     /* World markers sit under the cards and gauges. */
-    #markers { inset: 0; z-index: -1; }
+    #hud > #markers { position: fixed; inset: 0; z-index: -1; }
     .marker { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: 3px; margin: -14px 0 0 -60px; width: 120px; color: #fffaf0; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); will-change: transform; }
     .marker i { width: 13px; height: 13px; transform: rotate(45deg); background: #fffaf0; border: 2px solid var(--ink); }
     .marker b { font-size: 12px; font-weight: 800; letter-spacing: 0.01em; }
@@ -135,7 +147,7 @@
     .marker.found i { background: var(--forest); }
 
     /* ---------- touch controls ---------- */
-    #touch { position: fixed; inset: auto 0 0 0; height: 0; z-index: 11; display: none; }
+    #touch { position: fixed; inset: auto var(--safe-r) 0 var(--safe-l); height: 0; z-index: 11; display: none; }
     body.touch.driving #touch { display: block; }
     #touch button { position: absolute; border: 0; background: rgba(24, 24, 22, 0.5); color: #fffaf0; border-radius: 18px; font-weight: 800; pointer-events: auto; touch-action: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
     #touch button.on { background: rgba(232, 98, 42, 0.85); }
@@ -178,6 +190,7 @@
     #title .ko { margin-top: 10px; font-size: 16px; font-weight: 700; color: rgba(255, 250, 240, 0.8); letter-spacing: 0.12em; }
     #title .tag { margin: 16px 0 22px; max-width: 42ch; font-size: 14.5px; line-height: 1.65; color: rgba(255, 250, 240, 0.85); }
     #title .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    #install-hint { margin-top: 10px; font-size: 12px; color: rgba(255, 250, 240, 0.75); }
     #title-progress { margin-top: 10px; font: 700 12px var(--mono); color: rgba(255, 250, 240, 0.7); }
     #title .settings { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 26px; padding-top: 16px; border-top: 1px solid rgba(255, 250, 240, 0.18); font-size: 12px; color: rgba(255, 250, 240, 0.75); align-items: center; }
     #title .settings label { display: flex; gap: 8px; align-items: center; }
@@ -354,7 +367,9 @@
         <button class="btn hidden" id="btn-continue" data-i18n="btn.continue"></button>
         <button class="btn ghost hidden" id="btn-new" style="color:#fffaf0;box-shadow:inset 0 0 0 2px rgba(255,250,240,.6)" data-i18n="btn.new"></button>
         <button class="btn ghost" id="btn-title-help" style="color:#fffaf0;box-shadow:inset 0 0 0 2px rgba(255,250,240,.35)" data-i18n="btn.help"></button>
+        <button class="btn ghost hidden" id="btn-install" style="color:#fffaf0;box-shadow:inset 0 0 0 2px rgba(255,250,240,.35)" data-i18n="btn.install"></button>
       </div>
+      <div id="install-hint" class="hidden" data-i18n="pwa.iosHint"></div>
       <div id="title-progress"></div>
       <div class="keys">
         <span><kbd>W</kbd> <kbd>S</kbd></span><span data-i18n="help.drive"></span>
