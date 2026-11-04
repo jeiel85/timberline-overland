@@ -38,8 +38,13 @@ export function buildPhysics(RAPIER, T, S, rockHulls, props) {
     kinds.set(world.createCollider(desc).handle, 'wood');
   }
 
+  // Landmark parts: yawed boxes, or convex hulls (world-space points) for heaps and rocks.
   for (const p of props) {
-    const desc = RAPIER.ColliderDesc.cuboid(p.hx, p.hy, p.hz).setTranslation(p.x, p.y, p.z).setRotation(yawQuat(p.rot || 0)).setFriction(0.8);
+    const desc = p.hull
+      ? RAPIER.ColliderDesc.convexHull(p.hull)
+      : RAPIER.ColliderDesc.cuboid(p.hx, p.hy, p.hz).setTranslation(p.x, p.y, p.z).setRotation(yawQuat(p.rot || 0));
+    if (!desc) continue;
+    desc.setFriction(0.8);
     kinds.set(world.createCollider(desc).handle, p.kind || 'wood');
   }
 

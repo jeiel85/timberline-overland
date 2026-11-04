@@ -1,3 +1,6 @@
 .claude/
 node_modules/
 *.log
+tools/blender/terrain.json
+tools/blender/renders/
+__pycache__/
