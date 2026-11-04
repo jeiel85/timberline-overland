@@ -135,7 +135,10 @@ src/
   engine-worklet.js 엔진 합성기 (AudioWorklet, 폭발 펄스 + 공명)
   camera.js · hud.js · input.js · fx.js · i18n.js · main.js
 tests/              node --test
+tools/blender/      랜드마크 블록아웃: 실제 지형 위에서 형태를 잡아 보는 Blender 스크립트 (게임에는 들어가지 않음)
 ```
+
+광산·대피소·선착장은 Blender로 실제 지형 위에서 형태를 잡은 뒤 같은 형태를 three.js 코드로 옮겼습니다. 게임에는 모델 파일 없이 코드만 들어갑니다([DECISIONS.md](DECISIONS.md)).
 
 ## 만든 계기
 
