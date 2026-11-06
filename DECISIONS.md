@@ -2,6 +2,19 @@
 
 되돌리기 어려운 결정(데이터 형식·주요 의존성·공개 약속)만 적습니다.
 
+## 2026-11-06 · 앱 식별자(manifest `id`)는 `/timberline-overland/`
+
+**배경** — `manifest.webmanifest`의 `"id": "./"`는 manifest 위치가 아니라 **start_url의 출처**(`https://jeiel85.github.io`) 기준으로 풀려 `https://jeiel85.github.io/`가 된다. 같은 출처의 다른 Pages 게임 8개도 `"./"`라 Chrome은 이들을 모두 같은 앱으로 봤다. 한 게임이 설치돼 있으면 다른 게임에서 설치 제안이 나오지 않고, 설치된 앱의 시작 주소가 다른 게임으로 덮어써지기도 했다. Chrome DevTools `Page.getAppId`도 `/timberline-overland/`를 권한다.
+
+**고른 것** — `"id": "/timberline-overland/"`. 출처 안에서 이 게임만의 경로라 겹치지 않는다. `tests/pwa.test.mjs`가 이 값을 지킨다.
+
+**고르지 않은 것**
+- id 빼기 — start_url(`./`)이 id가 되어 지금 값은 같지만, start_url에 쿼리를 붙이는 순간 앱 정체성이 바뀐다.
+
+**결과**
+- id는 앱의 정체성이라 바꾸면 이미 설치한 앱이 새 manifest를 받지 못하고 새 앱으로 다시 설치해야 한다. 이번 변경 전에 설치한 앱도 그렇다(옛 앱을 지우고 다시 설치). 옛 id는 다른 앱과 겹쳐 있어 어차피 바로잡아야 했다. 저장(localStorage)은 출처 단위라 영향이 없다.
+- 서비스 워커는 같은 출처 파일을 네트워크 우선으로 받으므로 바꾸지 않았다. 고친 manifest는 Pages의 HTTP 캐시(10분)가 지나면 닿는다.
+
 ## 2026-11-04 · 3D 오브젝트는 Blender로 설계하고 three.js 코드로 옮긴다
 
 **배경** — 랜드마크 일부(옛 광산, 설선 대피소, 호수 선착장)가 게임 안에서 미흡해 보강이 필요했고, 로컬 Blender 5.2와 `scenario-blender-*` 스킬을 쓸 수 있게 됐다. README와 소개글은 "외부 에셋 파일 없이 지형·차량·건물·소리를 전부 코드로 생성"(100% procedural)을 내세운다.

@@ -42,6 +42,8 @@ function pngSize(p) {
 
 test('the manifest is installable and its icons are real', () => {
   const m = JSON.parse(read('manifest.webmanifest'));
+  // "./"는 manifest 위치가 아니라 출처(jeiel85.github.io) 기준으로 풀려 같은 출처의 다른 게임과 같은 앱이 된다(DECISIONS.md).
+  assert.equal(m.id, '/timberline-overland/');
   for (const k of ['name', 'short_name', 'start_url', 'scope', 'display', 'background_color', 'theme_color']) assert.ok(m[k], k);
   const sizes = m.icons.map((i) => i.sizes);
   assert.ok(sizes.includes('192x192') && sizes.includes('512x512'));
